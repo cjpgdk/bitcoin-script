@@ -14,6 +14,7 @@ $iterator = Finder::create()
 
 $versions = GitVersionCollection::create($dir)
     ->addFromTags('*')
+    ->add('php7.x', 'PHP 7.x')
     ->add('master', 'Latest')
     ->add('develop', 'Develop');
 
