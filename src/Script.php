@@ -115,12 +115,6 @@ abstract class Script implements JsonSerializable, ArrayAccess
             return $this->ops;
         }
 
-        /* Script can be empty.
-        if ($this->data->size() <= 0) {
-            throw new ScriptException('The script is empty!');
-        }
-        */
-
         try {
             $this->ops = $this->parseOps();
         } catch (Exception $ex) {
@@ -142,24 +136,19 @@ abstract class Script implements JsonSerializable, ArrayAccess
 
         while ($this->pos < $this->size()) {
             $code = ord($this->data[$this->pos++]);
+            $opcode = Opcode::fromCode($code);
             $data = null;
-
-            if ($code == Opcode::OP_0) {
+            if ($opcode == Opcode::OP_0) {
                 $data = '';
             } elseif (Opcode::isData($code)) {
                 $data = $this->readData($code);
             } elseif (Opcode::isPushData($code)) {
-                $data = $this->readPushData($code);
-            } elseif ($code == Opcode::OP_1NEGATE) {
+                $data = $this->readPushData($opcode);
+            } elseif ($opcode == Opcode::OP_1NEGATE) {
                 $data = chr(-1);
             }
-
-            $ops[] = new Op(
-                Opcode::fromCode($code),
-                $data
-            );
+            $ops[] = new Op($opcode, $data);
         }
-
         return $ops;
     }
 
@@ -168,10 +157,10 @@ abstract class Script implements JsonSerializable, ArrayAccess
      *
      * @return bool
      */
-    public function isPushOnly()
+    public function isPushOnly(): bool
     {
         for ($i = 1; $i < count($ops = $this->parse()); $i++) {
-            if ($ops[$i]->code->code() > Opcode::OP_16) {
+            if ($ops[$i]->code > Opcode::OP_16) {
                 return false;
             }
         }
@@ -197,7 +186,7 @@ abstract class Script implements JsonSerializable, ArrayAccess
             if (!in_array($op->data[0], ["\x04", "\x03", "\x02"])) {
                 continue;
             }
-            $keys[] = bin2hex($op->data);
+            $keys[] = $op->hex();
         }
 
         return $keys;
@@ -229,10 +218,10 @@ abstract class Script implements JsonSerializable, ArrayAccess
     /**
      * Reads push data (OP_PUSHDATA1, OP_PUSHDATA2 and OP_PUSHDATA4)
      *
-     * @param int $code
+     * @param Opcode $code
      * @return string
      */
-    private function readPushData(int $code): string
+    private function readPushData(Opcode $code): string
     {
         $read = ord($this[$this->pos]);
 
@@ -324,7 +313,7 @@ abstract class Script implements JsonSerializable, ArrayAccess
         return implode(' ', $this->parse());
     }
 
-    public function jsonSerialize(): mixed
+    public function jsonSerialize(): string
     {
         return $this->__toString();
     }

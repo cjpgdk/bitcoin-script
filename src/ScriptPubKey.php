@@ -39,7 +39,7 @@ class ScriptPubKey extends Script
      *
      * @return string
      */
-    public function getType()
+    public function getType(): string
     {
         $version = $program = -1;
         if ($this->isWitnessProgram($version, $program)) {
@@ -79,7 +79,7 @@ class ScriptPubKey extends Script
         // TxoutType::NULL_DATA
         if (
             $this->size() >= 1 &&
-            ord($this[0]) == Opcode::OP_RETURN &&
+            Opcode::valueIs(ord($this[0]), Opcode::OP_RETURN) &&
             $this->isPushOnly()
         ) {
             return "nulldata";
@@ -100,7 +100,7 @@ class ScriptPubKey extends Script
         if ($this->size() < 4 || $this->size() > 42) {
             return false;
         }
-        $c0 = ord($this[0]);
+        $c0 = Opcode::fromCode(ord($this[0]));
         if (
             $c0 != Opcode::OP_0 &&
             ($c0 < Opcode::OP_1 || $c0 > Opcode::OP_16)
@@ -110,7 +110,7 @@ class ScriptPubKey extends Script
 
         $c1 = ord($this[1]);
         if (($c1 + 2) == $this->size()) {
-            $version = Opcode::decodeOpN($c0);
+            $version = $c0->decode();
             $program = strlen(substr($this->data, 2));
             return true;
         }
@@ -126,7 +126,7 @@ class ScriptPubKey extends Script
     {
         return (
             $this->size() == 34 &&
-            ord($this[0]) == Opcode::OP_1 &&
+            Opcode::valueIs(ord($this[0]), Opcode::OP_1) &&
             bin2hex($this[1]) == "20"
         );
     }
@@ -138,7 +138,8 @@ class ScriptPubKey extends Script
      */
     public function isPayToWitnessPublicKeyHash(): bool
     {
-        return $this->size() == 22 && ord($this[0]) == Opcode::OP_0;
+        return $this->size() == 22 && 
+            Opcode::valueIs(ord($this[0]), Opcode::OP_0);
     }
 
     /**
@@ -153,15 +154,23 @@ class ScriptPubKey extends Script
         if ($this->size() <= 0) {
             return false;
         }
-        $code = ord($this[-1]);
+        
         if (
-            ($code !== Opcode::OP_CHECKMULTISIG) &&
-            ($code !== Opcode::OP_CHECKMULTISIGVERIFY)
+            !Opcode::fromCode(ord($this[0]))->isSmallInteger() ||
+            !Opcode::fromCode(ord($this[-2]))->isSmallInteger()
         ) {
             return false;
         }
-        $min = (int)substr(Opcode::getOpName(ord($this[0])), 3);
-        $max = (int)substr(Opcode::getOpName(ord($this[-2])), 3);
+        
+        $code = ord($this[-1]);
+        if (
+            !Opcode::valueIs($code, Opcode::OP_CHECKMULTISIG) &&
+            !Opcode::valueIs($code, Opcode::OP_CHECKMULTISIGVERIFY)
+        ) {
+            return false;
+        }
+        $min = (int)substr(Opcode::fromCode(ord($this[0]))->name, 3);
+        $max = (int)substr(Opcode::fromCode(ord($this[-2]))->name, 3);
         return $min <= $max;
     }
 
@@ -181,8 +190,8 @@ class ScriptPubKey extends Script
         // OP_CHECKSIG | OP_CHECKSIGVERIFY
         $cn1 = ord($this[-1]);
         if (
-            $cn1 != Opcode::OP_CHECKSIG &&
-            $cn1 != Opcode::OP_CHECKSIGVERIFY
+            !Opcode::valueIs($cn1, Opcode::OP_CHECKSIG) &&
+            !Opcode::valueIs($cn1, Opcode::OP_CHECKSIGVERIFY)
         ) {
             return false;
         }
@@ -204,10 +213,10 @@ class ScriptPubKey extends Script
     {
         return (
             $this->size() == 25 &&
-            ord($this[0]) == Opcode::OP_DUP &&
-            ord($this[1]) == Opcode::OP_HASH160 &&
-            ord($this[23]) == Opcode::OP_EQUALVERIFY &&
-            ord($this[24]) == Opcode::OP_CHECKSIG
+            Opcode::valueIs(ord($this[0]), Opcode::OP_DUP) &&
+            Opcode::valueIs(ord($this[1]), Opcode::OP_HASH160) &&
+            Opcode::valueIs(ord($this[23]), Opcode::OP_EQUALVERIFY) &&
+            Opcode::valueIs(ord($this[24]), Opcode::OP_CHECKSIG)
         );
     }
 
@@ -220,9 +229,9 @@ class ScriptPubKey extends Script
     {
         return (
             $this->size() == 23 &&
-            ord($this[0]) == Opcode::OP_HASH160 &&
+            Opcode::valueIs(ord($this[0]), Opcode::OP_HASH160) &&
             bin2hex($this[1]) == '14' &&
-            ord($this[22]) == Opcode::OP_EQUAL
+            Opcode::valueIs(ord($this[22]), Opcode::OP_EQUAL)
         );
     }
 
@@ -235,7 +244,7 @@ class ScriptPubKey extends Script
     {
         return (
             $this->size() == 34 &&
-            ord($this[0]) == Opcode::OP_0 &&
+            Opcode::valueIs(ord($this[0]), Opcode::OP_0) &&
             bin2hex($this[1]) == '20'
         );
     }

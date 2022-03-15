@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Cjpg\Bitcoin\Script;
 
-use App\Parsers\HexParser;
-
 /**
  * class Op is a script operation.
  */
@@ -60,15 +58,13 @@ class Op
      */
     public function __toString()
     {
-        $code = $this->code->code();
+        $code = $this->code;
         if ($code >= Opcode::OP_PUSHDATA1 && $code <= Opcode::OP_PUSHDATA4) {
             // OP_PUSHDATA1
-            /** @phpstan-ignore-next-line. */
             if ($code >= Opcode::OP_PUSHDATA1 && $code < Opcode::OP_PUSHDATA2) {
                 return sprintf('OP_PUSHDATA1 %s', $this->hex());
             }
             // OP_PUSHDATA2
-            /** @phpstan-ignore-next-line. */
             if ($code >= Opcode::OP_PUSHDATA2 && $code < Opcode::OP_PUSHDATA4) {
                 return sprintf('OP_PUSHDATA2 %s', $this->hex());
             }
@@ -76,8 +72,11 @@ class Op
             return sprintf('OP_PUSHDATA4 %s', $this->hex());
         }
 
-        if (($opcode = $this->code->getOpName) !== 'OP_UNKNOWN') {
-            return $opcode;
+        if (
+            !Opcode::isData($this->code->value) &&
+            $this->code !== Opcode::OP_INVALIDOPCODE
+        ) {
+            return $this->code->name;
         }
         return $this->hex();
     }
