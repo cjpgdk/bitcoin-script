@@ -77,15 +77,23 @@ class ScriptPubKey extends Script
             return "scripthash";
         }
         // TxoutType::NULL_DATA
-        if (
-            $this->size() >= 1 &&
-            Opcode::valueIs(ord($this[0]), Opcode::OP_RETURN) &&
-            $this->isPushOnly()
-        ) {
+        if ($this->isNullData()) {
             return "nulldata";
         }
         // TxoutType::NONSTANDARD
         return "nonstandard";
+    }
+    
+    /**
+     * Check if this script is null data.
+     * 
+     * @return bool
+     */
+    public function isNullData(): bool
+    {
+        return $this->size() >= 1 &&
+            Opcode::valueIs(ord($this[0]), Opcode::OP_RETURN) &&
+            $this->isPushOnly();
     }
 
     /**
