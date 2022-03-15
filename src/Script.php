@@ -160,7 +160,7 @@ abstract class Script implements JsonSerializable, ArrayAccess
     public function isPushOnly(): bool
     {
         for ($i = 1; $i < count($ops = $this->parse()); $i++) {
-            if ($ops[$i]->code > Opcode::OP_16) {
+            if ($ops[$i]->code->value > Opcode::OP_16->value) {
                 return false;
             }
         }
