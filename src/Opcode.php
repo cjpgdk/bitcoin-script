@@ -250,7 +250,7 @@ enum Opcode: int
      */
     public function decode(): int
     {
-        if (!$this->value <= Opcode::OP_16->value) {
+        if (!($this->value <= Opcode::OP_16->value)) {
             return -1;
         }
         if ($this === Opcode::OP_0) {

@@ -138,7 +138,7 @@ class ScriptPubKey extends Script
      */
     public function isPayToWitnessPublicKeyHash(): bool
     {
-        return $this->size() == 22 && 
+        return $this->size() == 22 &&
             Opcode::valueIs(ord($this[0]), Opcode::OP_0);
     }
 
@@ -154,14 +154,14 @@ class ScriptPubKey extends Script
         if ($this->size() <= 0) {
             return false;
         }
-        
+
         if (
             !Opcode::fromCode(ord($this[0]))->isSmallInteger() ||
             !Opcode::fromCode(ord($this[-2]))->isSmallInteger()
         ) {
             return false;
         }
-        
+
         $code = ord($this[-1]);
         if (
             !Opcode::valueIs($code, Opcode::OP_CHECKMULTISIG) &&
