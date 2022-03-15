@@ -169,8 +169,8 @@ class ScriptPubKey extends Script
         ) {
             return false;
         }
-        $min = (int)substr(Opcode::fromCode(ord($this[0]))->name, 3);
-        $max = (int)substr(Opcode::fromCode(ord($this[-2]))->name, 3);
+        $min = Opcode::fromCode(ord($this[0]))->decode();
+        $max = Opcode::fromCode(ord($this[-2]))->decode();
         return $min <= $max;
     }
 
