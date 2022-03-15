@@ -1,0 +1,242 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Cjpg\Bitcoin\Script;
+
+/**
+ * class ScriptPubKey
+ */
+class ScriptPubKey extends Script
+{
+    /**
+     * Gets the public key hashes if any.
+     *
+     * @return array<string>
+     */
+    public function publicKeyHashes(): array
+    {
+        $hashes = [];
+        $isKeyHash = $this->isPayToWitnessPublicKeyHash() ||
+                     $this->isPayToPubKeyHash();
+
+        if (!$isKeyHash) {
+            return $hashes;
+        }
+
+        foreach ($this->parse() as $idx => $op) {
+            if (!$op->data || !in_array($op->size(), [20, 32])) {
+                continue;
+            }
+
+            $hashes[] = bin2hex($op->data);
+        }
+        return $hashes;
+    }
+
+    /**
+     * Get the script type.
+     *
+     * @return string
+     */
+    public function getType()
+    {
+        $version = $program = -1;
+        if ($this->isWitnessProgram($version, $program)) {
+            // TxoutType::WITNESS_V0_KEYHASH isPayToWitnessPublicKeyHash()
+            if ($version == 0 && $program == static::WITNESS_V0_KEYHASH_SIZE) {
+                return "witness_v0_keyhash";
+            }
+            // TxoutType::WITNESS_V0_SCRIPTHASH isPayToWitnessScriptHash()
+            if ($version == 0 && $program == static::WITNESS_V0_SCRIPTHASH_SIZE) {
+                return "witness_v0_scripthash";
+            }
+            // TxoutType::WITNESS_V1_TAPROOT isPayToWitnessTaproot()
+            if ($version == 1 && $program == static::WITNESS_V1_TAPROOT_SIZE) {
+                return "witness_v1_taproot";
+            }
+            // TxoutType::WITNESS_UNKNOWN
+            if ($version != -1) {
+                return "witness_unknown";
+            }
+        }
+        // TxoutType::MULTISIG
+        if ($this->isMultisig()) {
+            return "multisig";
+        }
+        // TxoutType::PUBKEY
+        if ($this->isPayToPubKey()) {
+            return "pubkey";
+        }
+        //TxoutType::PUBKEYHASH
+        if ($this->isPayToPubKeyHash()) {
+            return "pubkeyhash";
+        }
+        // TxoutType::SCRIPTHASH
+        if ($this->isPayToScriptHash()) {
+            return "scripthash";
+        }
+        // TxoutType::NULL_DATA
+        if (
+            $this->size() >= 1 &&
+            ord($this[0]) == Opcode::OP_RETURN &&
+            $this->isPushOnly()
+        ) {
+            return "nulldata";
+        }
+        // TxoutType::NONSTANDARD
+        return "nonstandard";
+    }
+
+    /**
+     * Check if this script is a witness program
+     *
+     * @param int $version between 0 and 16 inclusive
+     * @param int $program the length of the data.
+     * @return bool
+     */
+    public function isWitnessProgram(int &$version, int &$program): bool
+    {
+        if ($this->size() < 4 || $this->size() > 42) {
+            return false;
+        }
+        $c0 = ord($this[0]);
+        if (
+            $c0 != Opcode::OP_0 &&
+            ($c0 < Opcode::OP_1 || $c0 > Opcode::OP_16)
+        ) {
+            return false;
+        }
+
+        $c1 = ord($this[1]);
+        if (($c1 + 2) == $this->size()) {
+            $version = Opcode::decodeOpN($c0);
+            $program = strlen(substr($this->data, 2));
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Pay to witness tap root (P2TR)
+     *
+     * @return bool
+     */
+    public function isPayToWitnessTaproot(): bool
+    {
+        return (
+            $this->size() == 34 &&
+            ord($this[0]) == Opcode::OP_1 &&
+            bin2hex($this[1]) == "20"
+        );
+    }
+
+    /**
+     * Pay to witness public key hash (P2WPKH)
+     *
+     * @return bool
+     */
+    public function isPayToWitnessPublicKeyHash(): bool
+    {
+        return $this->size() == 22 && ord($this[0]) == Opcode::OP_0;
+    }
+
+    /**
+     * Check if the script is a multisig
+     *
+     * @param int|null $min [Optional] Outputs the minimum required signatures.
+     * @param int|null $max [Optional] Outputs the maximum required signatures.
+     * @return bool
+     */
+    public function isMultisig(?int &$min = null, ?int &$max = null): bool
+    {
+        if ($this->size() <= 0) {
+            return false;
+        }
+        $code = ord($this[-1]);
+        if (
+            ($code !== Opcode::OP_CHECKMULTISIG) &&
+            ($code !== Opcode::OP_CHECKMULTISIGVERIFY)
+        ) {
+            return false;
+        }
+        $min = (int)substr(Opcode::getOpName(ord($this[0])), 3);
+        $max = (int)substr(Opcode::getOpName(ord($this[-2])), 3);
+        return $min <= $max;
+    }
+
+    /**
+     * Pay to public key (P2PK)
+     *
+     * @return bool
+     */
+    public function isPayToPubKey(): bool
+    {
+        // check size.
+        $len = $this->size() > 0 ? ord($this[0]) : 0;
+        if ($len != 33 && $len != 65) {
+            return false;
+        }
+
+        // OP_CHECKSIG | OP_CHECKSIGVERIFY
+        $cn1 = ord($this[-1]);
+        if (
+            $cn1 != Opcode::OP_CHECKSIG &&
+            $cn1 != Opcode::OP_CHECKSIGVERIFY
+        ) {
+            return false;
+        }
+
+        // pub key prefix
+        return (
+            $this[1] == "\x04" ||
+            $this[1] == "\x02" ||
+            $this[1] == "\x03"
+        );
+    }
+
+    /**
+     * Pay to public key hash (P2PKH)
+     *
+     * @return bool
+     */
+    public function isPayToPubKeyHash(): bool
+    {
+        return (
+            $this->size() == 25 &&
+            ord($this[0]) == Opcode::OP_DUP &&
+            ord($this[1]) == Opcode::OP_HASH160 &&
+            ord($this[23]) == Opcode::OP_EQUALVERIFY &&
+            ord($this[24]) == Opcode::OP_CHECKSIG
+        );
+    }
+
+    /**
+     * Pay to script hash (P2SH)
+     *
+     * @return bool
+     */
+    public function isPayToScriptHash(): bool
+    {
+        return (
+            $this->size() == 23 &&
+            ord($this[0]) == Opcode::OP_HASH160 &&
+            bin2hex($this[1]) == '14' &&
+            ord($this[22]) == Opcode::OP_EQUAL
+        );
+    }
+
+    /**
+     * Pay to witness script hash (P2WSH)
+     *
+     * @return bool
+     */
+    public function isPayToWitnessScriptHash(): bool
+    {
+        return (
+            $this->size() == 34 &&
+            ord($this[0]) == Opcode::OP_0 &&
+            bin2hex($this[1]) == '20'
+        );
+    }
+}
