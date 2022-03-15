@@ -59,25 +59,22 @@ class Op
     public function __toString()
     {
         $code = $this->code;
-        if ($code >= Opcode::OP_PUSHDATA1 && $code <= Opcode::OP_PUSHDATA4) {
-            // OP_PUSHDATA1
-            if ($code >= Opcode::OP_PUSHDATA1 && $code < Opcode::OP_PUSHDATA2) {
-                return sprintf('OP_PUSHDATA1 %s', $this->hex());
-            }
-            // OP_PUSHDATA2
-            if ($code >= Opcode::OP_PUSHDATA2 && $code < Opcode::OP_PUSHDATA4) {
-                return sprintf('OP_PUSHDATA2 %s', $this->hex());
-            }
-            // OP_PUSHDATA4
-            return sprintf('OP_PUSHDATA4 %s', $this->hex());
+        if ($this->size() > 0 && Opcode::isPushData($this->code->value)) {
+            return $this->hex();
         }
 
-        if (
-            !Opcode::isData($this->code->value) &&
-            $this->code !== Opcode::OP_INVALIDOPCODE
-        ) {
+        if ($this->code !== Opcode::OP_INVALIDOPCODE) {
+            if($this->code->isSmallInteger() || $this->code == Opcode::OP_0) {
+                return (string)$this->code->decode();
+            }
             return $this->code->name;
         }
+        
+       
+        if ($this->size() <= 0 && $this->code === Opcode::OP_INVALIDOPCODE) {
+            return 'OP_UNKNOWN';
+        }
+        
         return $this->hex();
     }
 }
