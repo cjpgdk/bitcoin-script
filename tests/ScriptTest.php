@@ -8,7 +8,6 @@ use PHPUnit\Framework\TestCase;
 
 final class ScriptTest extends TestCase
 {
-
     /**
      * @dataProvider scriptPubKeyData
      */
@@ -19,7 +18,7 @@ final class ScriptTest extends TestCase
         $this->assertSame($asm, "{$script}");
 
         $this->assertSame($type, $script->getType());
-        
+
         if ($typeFn) {
             $this->assertTrue($script->{$typeFn}());
         }
@@ -108,8 +107,8 @@ final class ScriptTest extends TestCase
             $this->assertNotEmpty((string)$scriptSig);
         }
     }
-    
-    
+
+
     /**
      * @return array<int, array<int, string|null>>
      */

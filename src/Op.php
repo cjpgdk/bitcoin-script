@@ -64,17 +64,17 @@ class Op
         }
 
         if ($this->code !== Opcode::OP_INVALIDOPCODE) {
-            if($this->code->isSmallInteger() || $this->code == Opcode::OP_0) {
+            if ($this->code->isSmallInteger() || $this->code == Opcode::OP_0) {
                 return (string)$this->code->decode();
             }
             return $this->code->name;
         }
-        
-       
+
+
         if ($this->size() <= 0 && $this->code === Opcode::OP_INVALIDOPCODE) {
             return 'OP_UNKNOWN';
         }
-        
+
         return $this->hex();
     }
 }

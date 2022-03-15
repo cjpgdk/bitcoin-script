@@ -83,10 +83,10 @@ class ScriptPubKey extends Script
         // TxoutType::NONSTANDARD
         return "nonstandard";
     }
-    
+
     /**
      * Check if this script is null data.
-     * 
+     *
      * @return bool
      */
     public function isNullData(): bool
