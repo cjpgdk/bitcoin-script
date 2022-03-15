@@ -8,91 +8,34 @@ use PHPUnit\Framework\TestCase;
 
 final class ScriptTest extends TestCase
 {
-    public function scriptPubKeyData(): array
-    {
-        return [
-            [
-                '2102a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff397ac',
-                '02a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff397 OP_CHECKSIG',
-                'pubkey',
-                'type_fn' => 'isPayToPubKey'
-            ],
-            [
-                '76a9148fd139bb39ced713f231c58a4d07bf6954d1c20188ac',
-                'OP_DUP OP_HASH160 8fd139bb39ced713f231c58a4d07bf6954d1c201 OP_EQUALVERIFY OP_CHECKSIG',
-                'pubkeyhash',
-                'type_fn' => 'isPayToPubKeyHash'
-            ],
-            [
-                '522102a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff39721021ac43c7ff740014c3b33737ede99c967e4764553d1b2b83db77c83b8715fa72d2102df2089105c77f266fa11a9d33f05c735234075f2e8780824c6b709415f9fb48553ae',
-                'OP_2 02a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff397 021ac43c7ff740014c3b33737ede99c967e4764553d1b2b83db77c83b8715fa72d 02df2089105c77f266fa11a9d33f05c735234075f2e8780824c6b709415f9fb485 OP_3 OP_CHECKMULTISIG',
-                'multisig',
-                'type_fn' => 'isMultisig'
-            ],
-            [
-                '0014a2516e770582864a6a56ed21a102044e388c62e3',
-                'OP_0 a2516e770582864a6a56ed21a102044e388c62e3',
-                'witness_v0_keyhash',
-                'type_fn' => 'isPayToWitnessPublicKeyHash'
-            ],
-            [
-                'a914eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee87',
-                'OP_HASH160 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee OP_EQUAL',
-                'scripthash',
-                'type_fn' => 'isPayToScriptHash'
-            ],
-            [
-                '0020eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-                'OP_0 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-                'witness_v0_scripthash',
-                'type_fn' => 'isPayToWitnessScriptHash'
-            ],
-            [
-                '51206527a8f262d79e951999dceb68584e93c623e11a5746002c656c63beb71338e3',
-                'OP_1 6527a8f262d79e951999dceb68584e93c623e11a5746002c656c63beb71338e3',
-                'witness_v1_taproot',
-                'type_fn' => 'isPayToWitnessTaproot'
-            ],
-            [
-                '5120451979076a2ae67ef23c5ef51e3d264e1f572d7ddc60e6fd95e502df009f9674',
-                'OP_1 451979076a2ae67ef23c5ef51e3d264e1f572d7ddc60e6fd95e502df009f9674',
-                'witness_v1_taproot',
-                'type_fn' => 'isPayToWitnessTaproot'
-            ],
-            [
-                '51202fcad7470279652cc5f88b8908678d6f4d57af5627183b03fc8404cb4e16d889',
-                'OP_1 2fcad7470279652cc5f88b8908678d6f4d57af5627183b03fc8404cb4e16d889',
-                'witness_v1_taproot',
-                'type_fn' => 'isPayToWitnessTaproot'
-            ],
-            [
-                '5120eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-                'OP_1 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-                'witness_v1_taproot',
-                'isPayToWitnessTaproot'
-            ]
-        ];
-    }
-    
+
     /**
      * @dataProvider scriptPubKeyData
      */
-    public function testScriptPubKey(string $hex, string $asm, string $type, string $typeFn): void
+    public function testScriptPubKey(string $hex, string $asm, string $type, ?string $typeFn): void
     {
         $script = new ScriptPubKey($hex, true);
 
         $this->assertSame($asm, "{$script}");
-        
+
         $this->assertSame($type, $script->getType());
         
-        $this->assertTrue($script->{$typeFn}());
+        if ($typeFn) {
+            $this->assertTrue($script->{$typeFn}());
+        }
 
         $this->assertIsArray($script->publicKeyHashes());
-        
+
         if (in_array($type, ['pubkeyhash', 'witness_v0_keyhash'])) {
             $this->assertNotEmpty($script->publicKeyHashes());
         } else {
             $this->assertEmpty($script->publicKeyHashes());
+        }
+
+        if (in_array($type, ['pubkey', 'multisig'])) {
+            $this->assertNotEmpty($script->publicKeys());
+        } else {
+            $this->assertEmpty($script->publicKeys());
         }
     }
 
@@ -164,5 +107,160 @@ final class ScriptTest extends TestCase
             $this->assertNotEmpty($scriptSig->parse());
             $this->assertNotEmpty((string)$scriptSig);
         }
+    }
+    
+    
+    /**
+     * @return array<int, array<int, string|null>>
+     */
+    public function scriptPubKeyData(): array
+    {
+        return [
+            // pubkeyhash
+            [
+                '76a9148fd139bb39ced713f231c58a4d07bf6954d1c20188ac',
+                'OP_DUP OP_HASH160 8fd139bb39ced713f231c58a4d07bf6954d1c201 OP_EQUALVERIFY OP_CHECKSIG',
+                'pubkeyhash', 'isPayToPubKeyHash'
+            ],
+            [
+                '76a9146c772e9cf96371bba3da8cb733da70a2fcf2007888ac',
+                'OP_DUP OP_HASH160 6c772e9cf96371bba3da8cb733da70a2fcf20078 OP_EQUALVERIFY OP_CHECKSIG',
+                'pubkeyhash', 'isPayToPubKeyHash'
+            ],
+
+            // nulldata
+            [
+                '6a4c4f54686973204f505f52455455524e207472616e73616374696f6e206f7574707574207761732063726561746564206279206d6f646966696564206372656174657261777472616e73616374696f6e2e',
+                'OP_RETURN 54686973204f505f52455455524e207472616e73616374696f6e206f7574707574207761732063726561746564206279206d6f646966696564206372656174657261777472616e73616374696f6e2e',
+                'nulldata', 'isNullData'
+            ],
+            [ '6a00', 'OP_RETURN 0', 'nulldata', 'isNullData' ],
+
+            // nonstandard
+            [ '6aee', 'OP_RETURN OP_UNKNOWN', 'nonstandard', null ],
+            // parse as is, no changing 02ee to [error]
+            // [ '6a02ee', 'OP_RETURN [error]', 'nonstandard', null ],
+            [ '6a02ee', 'OP_RETURN ee', 'nonstandard', null ],
+            // or 02eeee to -28398
+            // [ '02eeee', '-28398', 'nonstandard', null ],
+            [ '02eeee', 'eeee', 'nonstandard', null ],
+            [ 'ba', 'OP_CHECKSIGADD', 'nonstandard',  null ],
+            [ '50', 'OP_RESERVED', 'nonstandard',  null ],
+            [ '', '', 'nonstandard',  null ],
+            [ '75', 'OP_DROP', 'nonstandard',  null ],
+
+            // pubkey
+            [
+                '2102a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff397ac',
+                '02a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff397 OP_CHECKSIG',
+                'pubkey', 'isPayToPubKey'
+            ],
+            [
+                '2103a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff397ac',
+                '03a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff397 OP_CHECKSIG',
+                'pubkey', 'isPayToPubKey'
+            ],
+            [
+                // no checking the public keys. so to the script this is valid.
+                '4104a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff397a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff397ac',
+                '04a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff397a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff397 OP_CHECKSIG',
+                'pubkey', 'isPayToPubKey'
+            ],
+
+            // multisig
+            [
+                '522102a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff39721021ac43c7ff740014c3b33737ede99c967e4764553d1b2b83db77c83b8715fa72d2102df2089105c77f266fa11a9d33f05c735234075f2e8780824c6b709415f9fb48553ae',
+                '2 02a5613bd857b7048924264d1e70e08fb2a7e6527d32b7ab1bb993ac59964ff397 021ac43c7ff740014c3b33737ede99c967e4764553d1b2b83db77c83b8715fa72d 02df2089105c77f266fa11a9d33f05c735234075f2e8780824c6b709415f9fb485 3 OP_CHECKMULTISIG',
+                'multisig', 'isMultisig'
+            ],
+
+            // scripthash
+            [
+                'a914eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee87',
+                'OP_HASH160 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee OP_EQUAL',
+                'scripthash', 'isPayToScriptHash'
+            ],
+            [
+                'a9141c6fbaf46d64221e80cbae182c33ddf81b9294ac87',
+                'OP_HASH160 1c6fbaf46d64221e80cbae182c33ddf81b9294ac OP_EQUAL',
+                'scripthash', 'isPayToScriptHash'
+            ],
+            [
+                'a9146edf12858999f0dae74f9c692e6694ee3621b2ac87',
+                'OP_HASH160 6edf12858999f0dae74f9c692e6694ee3621b2ac OP_EQUAL',
+                'scripthash', 'isPayToScriptHash'
+            ],
+
+            // witness_v0_keyhash
+            [
+                '0014a2516e770582864a6a56ed21a102044e388c62e3',
+                '0 a2516e770582864a6a56ed21a102044e388c62e3',
+                'witness_v0_keyhash', 'isPayToWitnessPublicKeyHash'
+            ],
+            [
+                '00146edf12858999f0dae74f9c692e6694ee3621b2ac',
+                '0 6edf12858999f0dae74f9c692e6694ee3621b2ac',
+                'witness_v0_keyhash', 'isPayToWitnessPublicKeyHash'
+            ],
+            [
+                '0014eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+                '0 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+                'witness_v0_keyhash', 'isPayToWitnessPublicKeyHash'
+            ],
+
+            // witness_v0_scripthash
+            [
+                '0020eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+                '0 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+                'witness_v0_scripthash', 'isPayToWitnessScriptHash'
+            ],
+            [
+                '002096c2368fc30514a438a8bd909f93c49a1549d77198ccbdb792043b666cb24f42',
+                '0 96c2368fc30514a438a8bd909f93c49a1549d77198ccbdb792043b666cb24f42',
+                'witness_v0_scripthash', 'isPayToWitnessScriptHash'
+            ],
+            [
+                '0020e15a86a23178f433d514dbbce042e87d72662b8b5edcacfd2e37ab7a2d135f05',
+                '0 e15a86a23178f433d514dbbce042e87d72662b8b5edcacfd2e37ab7a2d135f05',
+                'witness_v0_scripthash', 'isPayToWitnessScriptHash'
+            ],
+            [
+                '00200bfe935e70c321c7ca3afc75ce0d0ca2f98b5422e008bb31c00c6d7f1f1c0ad6',
+                '0 0bfe935e70c321c7ca3afc75ce0d0ca2f98b5422e008bb31c00c6d7f1f1c0ad6',
+                'witness_v0_scripthash', 'isPayToWitnessScriptHash'
+            ],
+
+            // witness_v1_taproot
+            [
+                '51206527a8f262d79e951999dceb68584e93c623e11a5746002c656c63beb71338e3',
+                '1 6527a8f262d79e951999dceb68584e93c623e11a5746002c656c63beb71338e3',
+                'witness_v1_taproot',
+                'isPayToWitnessTaproot'
+            ],
+            [
+                '5120451979076a2ae67ef23c5ef51e3d264e1f572d7ddc60e6fd95e502df009f9674',
+                '1 451979076a2ae67ef23c5ef51e3d264e1f572d7ddc60e6fd95e502df009f9674',
+                'witness_v1_taproot',
+                'isPayToWitnessTaproot'
+            ],
+            [
+                '51202fcad7470279652cc5f88b8908678d6f4d57af5627183b03fc8404cb4e16d889',
+                '1 2fcad7470279652cc5f88b8908678d6f4d57af5627183b03fc8404cb4e16d889',
+                'witness_v1_taproot',
+                'isPayToWitnessTaproot'
+            ],
+            [
+                '5120eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+                '1 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+                'witness_v1_taproot', 'isPayToWitnessTaproot'
+            ],
+
+            // witness_unknown
+            [
+                '5102eeee',
+                '1 eeee',
+                'witness_unknown', null
+            ]
+        ];
     }
 }
