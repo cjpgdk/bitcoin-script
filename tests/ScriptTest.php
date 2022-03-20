@@ -23,12 +23,20 @@ final class ScriptTest extends TestCase
             $this->assertTrue($script->{$typeFn}());
         }
 
-        $this->assertIsArray($script->publicKeyHashes());
+        $this->assertIsArray($script->keyHashes());
 
-        if (in_array($type, ['pubkeyhash', 'witness_v0_keyhash'])) {
-            $this->assertNotEmpty($script->publicKeyHashes());
+        if (
+            in_array($type, [
+                'pubkeyhash',
+                'scripthash',
+                'witness_v0_keyhash',
+                'witness_v0_scripthash',
+                'witness_v1_taproot',
+            ])
+        ) {
+            $this->assertNotEmpty($script->keyHashes());
         } else {
-            $this->assertEmpty($script->publicKeyHashes());
+            $this->assertEmpty($script->keyHashes());
         }
 
         if (in_array($type, ['pubkey', 'multisig'])) {

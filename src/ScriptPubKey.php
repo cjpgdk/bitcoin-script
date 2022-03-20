@@ -10,31 +10,6 @@ namespace Cjpg\Bitcoin\Script;
 class ScriptPubKey extends Script
 {
     /**
-     * Gets the public key hashes if any.
-     *
-     * @return array<string>
-     */
-    public function publicKeyHashes(): array
-    {
-        $hashes = [];
-        $isKeyHash = $this->isPayToWitnessPublicKeyHash() ||
-                     $this->isPayToPubKeyHash();
-
-        if (!$isKeyHash) {
-            return $hashes;
-        }
-
-        foreach ($this->parse() as $idx => $op) {
-            if (!$op->data || !in_array($op->size(), [20, 32])) {
-                continue;
-            }
-
-            $hashes[] = bin2hex($op->data);
-        }
-        return $hashes;
-    }
-
-    /**
      * Get the script type.
      *
      * @return string
