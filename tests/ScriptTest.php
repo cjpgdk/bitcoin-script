@@ -81,7 +81,13 @@ final class ScriptTest extends TestCase
             $this->assertTrue($script->{$scriptPubKey['type_fn']}());
 
             $this->assertIsArray($script->publicKeyHashes());
-            if (in_array($scriptPubKey['type'], ['pubkeyhash', 'witness_v0_keyhash'])) {
+            if (
+                    in_array($scriptPubKey['type'], [
+                        'pubkeyhash', 'witness_v0_keyhash',
+                        'witness_v1_taproot', 'scripthash',
+                        'witness_v0_scripthash'
+                    ])
+            ) {
                 $this->assertNotEmpty($script->publicKeyHashes());
             } else {
                 $this->assertEmpty($script->publicKeyHashes());

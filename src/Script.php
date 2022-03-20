@@ -179,6 +179,33 @@ abstract class Script implements JsonSerializable, ArrayAccess
     }
 
     /**
+     * Alias of keyHashes().
+     * @return array<string>
+     */
+    public function publicKeyHashes(): array
+    {
+        return $this->keyHashes();
+    }
+
+    /**
+     * Gets the key hashes if any.
+     *
+     * @return array<string>
+     */
+    public function keyHashes(): array
+    {
+        $hashes = [];
+        foreach ($this->parse() as $idx => $op) {
+            if (!$op->data || !in_array($op->size(), [20, 32])) {
+                continue;
+            }
+
+            $hashes[] = bin2hex($op->data);
+        }
+        return $hashes;
+    }
+
+    /**
      * Get the public keys in the script if any.
      *
      * **Note** that the public keys are not validated they are only check for
